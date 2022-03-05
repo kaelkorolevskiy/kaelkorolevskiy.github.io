@@ -1,66 +1,99 @@
-//Countdown Timer
-const clockdiv = document.getElementById("countdown");
-const countDownTime = new Date(
-  clockdiv.getAttribute("data-date")
-).getTime();
+import "regenerator-runtime/runtime";
+import React, { useEffect, useState } from "react";
+import { login, logout } from "./utils";
 
-const countdownfunction = setInterval(function () {
-  const now = new Date().getTime();
-  const diff = countDownTime - now;
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor(diff % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
-  const minutes = Math.floor(diff % (1000 * 60 * 60) / (1000 * 60));
-  const seconds = Math.floor(diff % (1000 * 60) / 1000);
+// React Bootstrap css
+import "bootstrap/dist/css/bootstrap.min.css";
 
-  if (diff < 0) {
-    clockdiv.style.display = "none";
-    clearInterval(countdownfunction);
-  } else {
-    clockdiv.querySelector(".days").innerHTML = days;
-    clockdiv.querySelector(".hours").innerHTML = hours;
-    clockdiv.querySelector(".minutes").innerHTML = minutes;
-    clockdiv.querySelector(".seconds").innerHTML = seconds;
-  }
-}, 1000);
+// React Bootstraps imports
+import { Nav, Navbar, Container, Row, Card, Alert } from "react-bootstrap";
 
+// Custom Components
+import MintingTool from "./Components/MintingTool";
+import InfoBubble from "./Components/InfoBubble";
 
-// METAMASK CONNECTION
-window.addEventListener('DOMContentLoaded', () => {
-  const onboarding = new MetaMaskOnboarding();
-  const onboardButton = document.getElementById('connectWallet');
-  let accounts;
+// assets
+import Logo from "./assets/logo-white.svg";
 
-  const updateButton = () => {
-    if (!MetaMaskOnboarding.isMetaMaskInstalled()) {
-      onboardButton.innerText = 'Install MetaMask!';
-      onboardButton.onclick = () => {
-        onboardButton.innerText = 'Connecting...';
-        onboardButton.disabled = true;
-        onboarding.startOnboarding();
-      };
-    } else if (accounts && accounts.length > 0) {
-      onboardButton.innerText = `✔ ...${accounts[0].slice(-4)}`;
-      onboardButton.disabled = true;
-      onboarding.stopOnboarding();
-    } else {
-      onboardButton.innerText = 'Connect MetaMask!';
-      onboardButton.onclick = async () => {
-        await window.ethereum.request({
-          method: 'eth_requestAccounts',
+import getConfig from "./config";
+const { networkId } = getConfig(process.env.NODE_ENV || "development");
+
+export default function App() {
+  const [userHasNFT, setuserHasNFT] = useState(false);
+
+  useEffect(() => {
+    const receivedNFT = async () => {
+      console.log(
+        await window.contract.check_token({
+          id: `${window.accountId}-go-team-token`,
         })
-        .then(function(accounts) {
-          onboardButton.innerText = `✔ ...${accounts[0].slice(-4)}`;
-          onboardButton.disabled = true;
-        });
-      };
-    }
-  };
+      );
+      if (window.accountId !== "") {
+        console.log(
+          await window.contract.check_token({
+            id: `${window.accountId}-go-team-token`,
+          })
+        );
 
-  updateButton();
-  if (MetaMaskOnboarding.isMetaMaskInstalled()) {
-    window.ethereum.on('accountsChanged', (newAccounts) => {
-      accounts = newAccounts;
-      updateButton();
-    });
-  }
-});
+        setuserHasNFT(
+          await window.contract.check_token({
+            id: `${window.accountId}-go-team-token`,
+          })
+        );
+      }
+    };
+    receivedNFT();
+  }, []);
+
+  return (
+    <React.Fragment>
+      {" "}
+      <Navbar bg='dark' variant='dark'>
+        <Container>
+          <Navbar.Brand href='#home'>
+            <img
+              alt=''
+              src={Logo}
+              width='30'
+              height='30'
+              className='d-inline-block align-top'
+            />{" "}
+            NEAR Protocol
+          </Navbar.Brand>
+          <Navbar.Toggle aria-controls='responsive-navbar-nav' />
+          <Navbar.Collapse id='responsive-navbar-nav'>
+            <Nav className='me-auto'></Nav>
+            <Nav>
+              <Nav.Link
+                onClick={window.walletConnection.isSignedIn() ? logout : login}
+              >
+                {window.walletConnection.isSignedIn()
+                  ? window.accountId
+                  : "Login"}
+              </Nav.Link>{" "}
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+      <Container style={{ marginTop: "3vh" }}>
+        {" "}
+        <Row>
+          <Alert>
+            Hello! We are going to mint an NFT and have it appear in your
+            wallet! Sign in, mint your nft and head over to{" "}
+            <a href='https://wallet.testnet.near.org/'>
+              wallet.testnet.near.org
+            </a>{" "}
+            to see your new "Go Team" NFT!
+          </Alert>
+        </Row>
+        <Row>
+          <InfoBubble />
+        </Row>
+        <Row style={{ marginTop: "3vh" }}>
+          <MintingTool userNFTStatus={userHasNFT} />
+        </Row>
+      </Container>
+    </React.Fragment>
+  );
+}
